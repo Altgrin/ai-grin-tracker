@@ -3,32 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Scape Tracker</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #eee; padding: 20px; text-align: center; }
+    </style>
 </head>
 <body>
     <h1>AI Scape Tracker</h1>
-    <div id="content">Loading progress...</div>
-    
-    <script>
-        // 1. Double check this ID matches your Gist URL perfectly!
-        const GIST_ID = '4256f1570cec48d5b9ebe4d3fbbdfd23'; 
-
-        async function load() {
-            try {
-                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const data = await response.json();
-                
-                // 2. Check the file name here. It must match your Gist filename exactly!
-                const content = JSON.parse(data.files['osrs-progress.json'].content);
-                
-                document.getElementById('content').innerHTML = `<h3>Current Phase: ${content.currentPhase}</h3>`;
-            } catch (err) {
-                document.getElementById('content').innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
-                console.error(err);
-            }
-        }
-        load();
-    </script>
+    <div id="content">
+        <h3>Current Phase: 7</h3>
+        <p>A: Unlock Herblore</p>
+        <p>B: Agility Progression</p>
+    </div>
 </body>
 </html>
