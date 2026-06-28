@@ -1,53 +1,122 @@
-<button onclick="resetTracker()" style="margin-top: 20px; padding: 10px 15px; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">⚠️ Reset Tracker to Phase 7</button>
-</div> <script>
-    // 1. Core History Data (Phases 1-6 hardcoded)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Scape Tracker</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
+        h1 { color: #f1c40f; text-align: center; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 15px; font-size: 2.5rem; letter-spacing: 2px; }
+        
+        /* Stats Panel */
+        .stats-panel { background-color: #1a1a1a; border: 1px solid #444; padding: 20px; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); position: sticky; top: 10px; z-index: 100;}
+        .stats-panel h2 { color: #3498db; margin-top: 0; font-size: 1.3rem; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .stat-highlight { color: #4cd137; font-weight: bold; }
+        
+        /* History & Choices */
+        .history-step { background: #1e272e; margin: 20px 0; padding: 20px; border-radius: 8px; border-left: 4px solid #4cd137; animation: fadeIn 0.5s; }
+        .current-step { border-left-color: #e74c3c; background: #252d35; box-shadow: 0 0 15px rgba(231, 76, 60, 0.2); }
+        .options-container { display: flex; gap: 20px; margin-top: 15px; }
+        @media (max-width: 768px) { .options-container { flex-direction: column; } }
+        
+        /* Option Cards */
+        .option { background: #2f3640; padding: 15px; border-radius: 6px; flex: 1; border: 1px solid #353b48; transition: all 0.3s ease; cursor: pointer; }
+        .option:hover { border-color: #f1c40f; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(241, 196, 15, 0.1); }
+        .option h3 { margin-top: 0; color: #e1b12c; border-bottom: 1px dashed #555; padding-bottom: 5px; }
+        .label { font-weight: bold; color: #00a8ff; }
+        
+        /* Reset Button */
+        .reset-btn { width: 100%; padding: 15px; margin-top: 40px; background-color: #c0392b; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .reset-btn:hover { background-color: #e74c3c; box-shadow: 0 0 15px rgba(231,76,60,0.4); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Scape</h1>
+
+    <div class="stats-panel">
+        <h2>Account State: AI_grin</h2>
+        <ul>
+            <li><strong>Stats:</strong> <span id="ui-stats"></span></li>
+            <li><strong>Quests:</strong> <span id="ui-quests"></span></li>
+            <li><strong>Assets:</strong> <span id="ui-assets"></span></li>
+        </ul>
+    </div>
+
+    <div id="historyContainer"></div>
+
+    <div id="currentPhaseContainer"></div>
+
+    <button class="reset-btn" onclick="resetTracker()">⚠️ Erase Progress & Reset to Phase 7 ⚠️</button>
+</div>
+
+<script>
+    // --- 1. DATABASES & INITIAL STATES ---
+
+    const initialState = {
+        stats: "Attack 30, Strength 30, Agility 20, Thieving 25, HP 10",
+        quests: "1 QP (Waterfall Quest)",
+        assets: "GP from Silk, Cakes"
+    };
+
     const initialHistory = [
-        { phase: 1, title: "Phase 1: Early Capital", action: "Pickpocketing Lumbridge Men/Women (Thieving lvl 5)." },
+        { phase: 1, title: "Phase 1: Early Capital", action: "Pickpocketing Lumbridge Men/Women." },
         { phase: 2, title: "Phase 2: Food Security", action: "Stealing from Baker's Stalls in Ardougne." },
         { phase: 3, title: "Phase 3: Seed Capital", action: "Stealing Silk from Ardougne stalls." },
         { phase: 4, title: "Phase 4: Agility Base", action: "Gnome Stronghold Agility training." },
         { phase: 5, title: "Phase 5: Draynor Agility", action: "Training Agility to level 20." },
-        { phase: 6, title: "Phase 6: Combat Skip", action: "Waterfall Quest (30 Atk/Str)." }
+        { phase: 6, title: "Phase 6: Combat Skip", action: "Waterfall Quest completed." }
     ];
 
-    // Load history from browser storage, or use initial if empty
-    let history = JSON.parse(localStorage.getItem('osrsHistory')) || initialHistory;
-    
-    // Load current options from storage, or use Phase 7 defaults
-    let currentOptions = JSON.parse(localStorage.getItem('osrsCurrentOptions')) || [
-        { title: "Unlock Herblore", action: "Complete 'Druidic Ritual' quest." },
-        { title: "Al Kharid Agility", action: "Train at Al Kharid Rooftop Course to Lvl 30." }
+    const initialOptions = [
+        { 
+            title: "Unlock Herblore", 
+            action: "Complete 'Druidic Ritual' quest.",
+            upStats: " | Herblore 3", upQuests: " | +4 QP", upAssets: ""
+        },
+        { 
+            title: "Al Kharid Agility", 
+            action: "Train at Al Kharid Rooftop Course.",
+            upStats: " | Agility 30", upQuests: "", upAssets: " | Marks of Grace"
+        }
     ];
 
-    // 2. Database of future OSRS Goals to generate NEW choices
+    // Future Options Database (with reward modifiers for the Account State)
     const futureQuests = [
-        { title: "Witch's House", action: "Complete quest for massive early Hitpoints XP." },
-        { title: "The Grand Tree", action: "Complete quest for Agility and Attack XP." },
-        { title: "Tree Gnome Village", action: "Complete quest to unlock Spirit Tree transportation." },
-        { title: "Fight Arena", action: "Complete quest for massive early Thieving and Melee XP." },
-        { title: "Sea Slug", action: "Complete quest for fast, easy Fishing XP." },
-        { title: "Fairy Tale Part 1", action: "Complete quest for Magic secateurs and Farming XP." }
+        { title: "Witch's House", action: "Complete for massive early Hitpoints XP.", upStats: " | HP 24", upQuests: " | +4 QP", upAssets: "" },
+        { title: "The Grand Tree", action: "Complete for Agility/Attack XP.", upStats: " | Attack 40, Agility +XP", upQuests: " | +5 QP", upAssets: " | Spirit Tree Access" },
+        { title: "Tree Gnome Village", action: "Complete to unlock Spirit Trees.", upStats: " | Attack +XP", upQuests: " | +2 QP", upAssets: " | Spirit Tree Access" },
+        { title: "Fight Arena", action: "Complete for Thieving/Melee XP.", upStats: " | Thieving +XP, Attack +XP", upQuests: " | +2 QP", upAssets: "" },
+        { title: "Sea Slug", action: "Complete for fast Fishing XP.", upStats: " | Fishing 24", upQuests: " | +1 QP", upAssets: " | Proselyte Access Prep" }
     ];
 
     const futureSkilling = [
-        { title: "Wintertodt Prep", action: "Train Firemaking to level 50 to access the minigame." },
-        { title: "Barbarian Fishing", action: "Train Fishing to level 58 for passive Agility/Str XP." },
-        { title: "Motherlode Mine", action: "Train Mining to level 30 to start gathering coal/gold." },
-        { title: "Graceful Grind", action: "Grind Rooftop Agility until full Graceful outfit." },
-        { title: "Ardougne Cloak 1", action: "Complete Easy Ardougne Diary for the teleport cloak." },
-        { title: "Thieving to 50", action: "Blackjack or pickpocket to unlock Rogue's Den." }
+        { title: "Wintertodt Prep", action: "Train Firemaking to level 50.", upStats: " | Firemaking 50", upQuests: "", upAssets: " | Wintertodt Access" },
+        { title: "Barbarian Fishing", action: "Train Fishing to level 58.", upStats: " | Fishing 58", upQuests: "", upAssets: " | Leaping Fish" },
+        { title: "Motherlode Mine", action: "Train Mining to level 30.", upStats: " | Mining 30", upQuests: "", upAssets: " | Coal Banked" },
+        { title: "Graceful Grind", action: "Grind Rooftops for Graceful outfit.", upStats: " | Agility 40+", upQuests: "", upAssets: " | Full Graceful Outfit" },
+        { title: "Thieving to 50", action: "Blackjack or pickpocket.", upStats: " | Thieving 50", upQuests: "", upAssets: " | Rogue's Den Access" }
     ];
 
-    // 3. Render the Page
-    function render() {
-        const historyDiv = document.getElementById('historyContainer');
-        const currentDiv = document.getElementById('currentPhaseContainer');
-        
-        // Clear containers
-        historyDiv.innerHTML = '';
-        currentDiv.innerHTML = '';
+    // --- 2. LOAD DATA FROM BROWSER OR INITIALIZE ---
+    let history = JSON.parse(localStorage.getItem('osrsHistory')) || initialHistory;
+    let currentOptions = JSON.parse(localStorage.getItem('osrsCurrentOptions')) || initialOptions;
+    let accountState = JSON.parse(localStorage.getItem('osrsState')) || initialState;
 
-        // Render completed phases
+    // --- 3. RENDER FUNCTION ---
+    function render() {
+        // Update Account State Panel
+        document.getElementById('ui-stats').innerHTML = accountState.stats.replace(/ \| /g, ' <span class="stat-highlight">|</span> ');
+        document.getElementById('ui-quests').innerHTML = accountState.quests.replace(/ \| /g, ' <span class="stat-highlight">|</span> ');
+        document.getElementById('ui-assets').innerHTML = accountState.assets.replace(/ \| /g, ' <span class="stat-highlight">|</span> ');
+
+        // Update History
+        const historyDiv = document.getElementById('historyContainer');
+        historyDiv.innerHTML = '';
         history.forEach(step => {
             historyDiv.innerHTML += `
                 <div class="history-step">
@@ -57,18 +126,19 @@
             `;
         });
 
-        // Render current phase with choices
+        // Update Current Phase Options
+        const currentDiv = document.getElementById('currentPhaseContainer');
         const nextPhaseNum = history.length + 1;
         currentDiv.innerHTML = `
             <div class="history-step current-step">
                 <h2 class="phase-title">🔥 Phase ${nextPhaseNum}: New Decision</h2>
-                <p>These are your new choices, choose wisely:</p>
+                <p>These are your new choices. Choose your path to update your account state:</p>
                 <div class="options-container">
-                    <div class="option" onclick="makeChoice('${currentOptions[0].title}', '${currentOptions[0].action}')">
+                    <div class="option" onclick="makeChoice(0)">
                         <h3>Option A: ${currentOptions[0].title}</h3>
                         <p><span class="label">Action:</span> ${currentOptions[0].action}</p>
                     </div>
-                    <div class="option" onclick="makeChoice('${currentOptions[1].title}', '${currentOptions[1].action}')">
+                    <div class="option" onclick="makeChoice(1)">
                         <h3>Option B: ${currentOptions[1].title}</h3>
                         <p><span class="label">Action:</span> ${currentOptions[1].action}</p>
                     </div>
@@ -77,44 +147,51 @@
         `;
     }
 
-    // 4. Handle a Choice being clicked
-    function makeChoice(chosenTitle, chosenAction) {
+    // --- 4. HANDLE USER CHOICE ---
+    function makeChoice(optionIndex) {
+        const chosen = currentOptions[optionIndex];
         const nextPhaseNum = history.length + 1;
         
-        // Add choice to history
+        // 4a. Update Account State Strings based on rewards
+        if (chosen.upStats) accountState.stats += chosen.upStats;
+        if (chosen.upQuests) accountState.quests += chosen.upQuests;
+        if (chosen.upAssets) accountState.assets += chosen.upAssets;
+
+        // 4b. Add to History
         history.push({
             phase: nextPhaseNum,
-            title: `Phase ${nextPhaseNum}: ${chosenTitle}`,
-            action: chosenAction
+            title: `Phase ${nextPhaseNum}: ${chosen.title}`,
+            action: chosen.action
         });
 
-        // Generate TWO NEW options for the next phase
+        // 4c. Generate TWO NEW options
         const randomQuest = futureQuests[Math.floor(Math.random() * futureQuests.length)];
         const randomSkill = futureSkilling[Math.floor(Math.random() * futureSkilling.length)];
-        
         currentOptions = [randomQuest, randomSkill];
 
-        // Save to browser memory
+        // 4d. Save everything to localStorage
+        localStorage.setItem('osrsState', JSON.stringify(accountState));
         localStorage.setItem('osrsHistory', JSON.stringify(history));
         localStorage.setItem('osrsCurrentOptions', JSON.stringify(currentOptions));
 
-        // Update the screen
+        // 4e. Re-render UI and scroll down
         render();
-        
-        // Smooth scroll to the new decision
         setTimeout(() => {
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }, 100);
     }
 
-    // 5. NEW: Reset Function
+    // --- 5. RESET PROTOCOL ---
     function resetTracker() {
-        if(confirm("Are you sure you want to wipe your progress and return to Phase 7?")) {
+        if(confirm("Are you sure you want to completely erase your progress and revert AI_grin's account state back to Phase 7?")) {
             localStorage.clear();
             location.reload();
         }
     }
 
-    // Initialize the page on load
+    // Initial load
     render();
 </script>
+
+</body>
+</html>
