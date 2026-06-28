@@ -3,13 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Scape Tracker</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #eee; padding: 20px; }
+    </style>
 </head>
 <body>
     <h1>AI Scape Tracker</h1>
-    <div id="content">
-        <p>Phase 7: Current Status</p>
-        <p>A: Unlock Herblore</p>
-        <p>B: Agility Progression</p>
-    </div>
+    <div id="content">Loading progress...</div>
+    <script>
+        const GIST_ID = '4256f1570cec48d5b9ebe4d3fbbdfd23';
+        fetch(`https://api.github.com/gists/${GIST_ID}`)
+            .then(r => r.json())
+            .then(data => {
+                const state = JSON.parse(data.files['osrs-progress.json'].content);
+                document.getElementById('content').innerHTML = `<h3>Current Phase: ${state.currentPhase}</h3>`;
+            });
+    </script>
 </body>
 </html>
